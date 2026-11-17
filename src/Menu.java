@@ -10,12 +10,7 @@ public class Menu {
         manager.loadTasks();
         while (true) {
             System.out.println("\n===== 할 일 관리 =====");
-            System.out.println("1. 등록");
-            System.out.println("2. 조회");
-            System.out.println("3. 검색");
-            System.out.println("4. 수정");
-            System.out.println("5. 삭제");
-            System.out.println("0. 저장 및 종료");
+            System.out.println("1. 등록\t2. 조회\t3. 검색\t4. 수정\t5. 삭제\t0. 저장 및 종료");
             System.out.print("선택 : ");
 
             int choice;
