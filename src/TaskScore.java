@@ -7,23 +7,16 @@ public class TaskScore {
         return score;
     }
 
-    public void threeAddScore(int score) {
-        this.score = score+3;
-    }
-    public void oneAddScore(int score) {
-        this.score = score+1;
-    }
-    public void threeMinusScore(int score) {
-        this.score = score-3;
-        if (this.score<0){
-            this.score=0;
-        }
-    }
-    public void oneMinusScore(int score) {
-        this.score = score-1;
-        if (this.score<0){
-            this.score=0;
-        }
+    public void addScore(int score)   {
+        setScore(this.score + score);
     }
 
+    public void setScore(int score) {
+        if(score >= 0)  {
+            this.score = score;
+        }
+        else    {
+            this.score = 0;
+        }
+    }
 }
