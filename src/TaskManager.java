@@ -191,10 +191,25 @@ public class TaskManager {
     }
 
     // 선택 삭제 : 과제명을 입력받아 해당 과제를 삭제
-    public void deleteTask(Scanner scanner) {
+    public void deleteTask(Scanner scanner, boolean includeCompleted) {
         if (taskList.isEmpty()) {
             System.out.println("삭제할 할 일이 없습니다.");
             return;
+        }
+
+        int count = 0;
+
+        for (int i = 0; i < taskList.size(); i++) {
+            Task task = taskList.get(i);
+
+            if (!includeCompleted && task.getProcess() == 100) {continue;}
+
+            System.out.println("과제명 : " + task.getTaskName());
+
+            count++;
+        }
+        if (count == 0) {
+            System.out.println("조회할 할 일이 없습니다.");
         }
 
         System.out.print("삭제할 과제명 : ");

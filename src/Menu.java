@@ -68,7 +68,7 @@ public class Menu {
                             int deleteChoice = Integer.parseInt(scanner.nextLine());
 
                             if (deleteChoice == 1) {
-                                manager.deleteTask(scanner);
+                                manager.deleteTask(scanner, false);
                                 break;}
 
                             else if (deleteChoice == 2) {
