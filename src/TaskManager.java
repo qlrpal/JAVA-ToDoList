@@ -126,16 +126,59 @@ public class TaskManager {
         } if (count == 0) {System.out.println("검색 결과가 없습니다.");}
     }
 
+    public void checkTasks(String keyword) {
+
+    }
+
     // 수정 : 과제명을 입력받아 내용을 변경
     public void updateTask(Scanner scanner) {
         System.out.print("수정할 과제명 : ");
         String name = scanner.nextLine();
         Task selectedTask = null;
+        Boolean real = false;
 
-        for (Task task : taskList) { // 입력받은 과제를 검색
-            if (task.getTaskName().equals(name)) {
-                selectedTask = task;
-                break;}}
+        for (Task task1 : taskList) { // 입력받은 과제를 검색
+            if (task1.getTaskName().equals(name)) {
+                selectedTask = task1;
+                real = true;
+                break;
+            }
+        }
+
+        if (!real) {
+            int count = 0; // 검색 조건에 일치한 할 일의 개수
+
+            for (int i = 0; i < taskList.size(); i++) {
+                Task task = taskList.get(i);
+
+                if (task.getSubName().contains(name) || task.getTaskName().contains(name)) {
+
+                    System.out.println("과제 : " + task.getTaskName() + " | " + task.getSubName() + " | "
+                            + task.getDeadLine() + " | " + (task.getProcess() == 100 ? "완료" : "(" + task.getProcess() + "/100%)"));
+
+
+                    count++;
+
+                }
+            }
+            if (count == 0) {
+                System.out.println("검색 결과가 없습니다.");
+                System.out.println("--------------------");
+                return;
+            }
+            System.out.println("--------------------");
+
+            System.out.print("수정할 과제명 : ");
+            String realname = scanner.nextLine();
+
+            for (Task task1 : taskList) { // 입력받은 과제를 검색
+                if (task1.getTaskName().equals(realname)) {
+                    selectedTask = task1;
+                    break;
+                }
+            }
+        }
+
 
         if (selectedTask == null) {
             System.out.println("해당 과제명이 없습니다.");
@@ -204,7 +247,7 @@ public class TaskManager {
 
             if (!includeCompleted && task.getProcess() == 100) {continue;}
 
-            System.out.println("과제명 : " + task.getTaskName());
+            System.out.println("과제명 : " + task.getTaskName()+" | ("+(task.getProcess()+"/100%)"));
 
             count++;
         }
