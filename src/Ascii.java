@@ -28,13 +28,13 @@ public class Ascii {
         }
     }
 
-    String goodListArt =
+    private String goodListArt =
             " ███   ███   ███  ████     █     ███  ████ █████ \n" +
                     "█     █   █ █   █ █   █    █      █  █       █   \n" +
                     "█  ██ █   █ █   █ █   █    █      █   ███    █   \n" +
                     "█   █ █   █ █   █ █   █    █      █      █   █   \n" +
                     " ███   ███   ███  ████     █████ ███ ████    █   \n";
-    static String oneStepTree = ". .. .. .. .  .  .  .  .  . .. .. .\n" +
+    private String threeStepTree = ". .. .. .. .  .  .  .  .  . .. .. .\n" +
             ". .. .. .. .  .  .  .  .  . .. .. .\n" +
             " .  .  .  . .. :* .. .. .. .  .  . \n" +
             " .  .  .  . .. ..:-+ .. .  .  .  . \n" +
@@ -52,7 +52,7 @@ public class Ascii {
             "                 -                 \n" +
             "            -*=+%%+%%+             ";
 
-    static String twoStepTree = "   ..   --.   -.:- :=-  ...   ..   \n" +
+    private String fourStepTree = "   ..   --.   -.:- :=-  ...   ..   \n" +
             "... +.**##**+++***#*=+ .   ...  ...\n" +
             "...  #=*=*=*+.**#**%+#..   ...  ...\n" +
             "   ..+=##***#%#**#*%=#  ...   ..   \n" +
@@ -76,7 +76,7 @@ public class Ascii {
             "...  ...   ..%*#...   ..   ...  ...\n" +
             "   ..   ...  .@.   ..   ...   ..   \n" +
             "...  ...   .. @ ...   ..   ...  ...\n";
-    static String threeStepTree = "..   ..  ...  ..   ..  ...  ..   ..\n" +
+    private String twoStepTree = "..   ..  ...  ..   ..  ...  ..   ..\n" +
             "  ...  ..   ..  ...  ..   ..  ...  \n" +
             "..   ..  ...  ..   ..  ...  ..   ..\n" +
             "..   ..  ...  ..   ..  ...  ..   ..\n" +
@@ -95,7 +95,7 @@ public class Ascii {
             "  ...  ..   ..  ...  ..   ..  ...  \n" +
             "..   ..  ...  . :  ..  ...  ..   ..\n" +
             "\n";
-    static String fourStepTree="                                   \n" +
+    private String oneStepTree="                                   \n" +
             "                                   \n" +
             "           ==           ==         \n" +
             "           ==           ==         \n" +
@@ -108,7 +108,7 @@ public class Ascii {
             "               ==+**    #####      \n" +
             "               *****    #####      \n" +
             "               #####               ";
-    static String fiveStepTree="                                                   \n" +
+    private String fiveStepTree="                                                   \n" +
             "                                                   \n" +
             "                    :   :-+                        \n" +
             "              .==-:-:=-=-=+=-++-                   \n" +
@@ -136,7 +136,27 @@ public class Ascii {
         System.out.println(ascii);
     }
 
-    static void main() {
-        System.out.println(fiveStepTree);
+    public String getGoodListArt() {
+        return goodListArt;
+    }
+
+    public String getOneStepTree() {
+        return oneStepTree;
+    }
+
+    public String getTwoStepTree() {
+        return twoStepTree;
+    }
+
+    public String getThreeStepTree() {
+        return threeStepTree;
+    }
+
+    public String getFourStepTree() {
+        return fourStepTree;
+    }
+
+    public String getFiveStepTree() {
+        return fiveStepTree;
     }
 }
