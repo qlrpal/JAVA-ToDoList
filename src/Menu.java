@@ -15,8 +15,7 @@ public class Menu {
             System.out.println("3. 검색");
             System.out.println("4. 수정");
             System.out.println("5. 삭제");
-            System.out.println("6. 파일 저장");
-            System.out.println("0. 종료");
+            System.out.println("0. 저장 및 종료");
             System.out.print("선택 : ");
 
             int choice;
@@ -83,11 +82,10 @@ public class Menu {
                         } catch (NumberFormatException e) {System.out.println("번호는 정수로 입력해주세요.");}
                     }
                     break;
-                case 6:
-                    manager.saveTasks();
-                    break;
+
                 case 0:
-                    System.out.println("프로그램을 종료합니다.");
+                    manager.saveTasks();
+                    System.out.println("프로그램을 저장 및 종료합니다.");
                     return;
                 default:
                     System.out.println("메뉴에 있는 번호를 입력해주세요.");
