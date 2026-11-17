@@ -3,7 +3,6 @@ import java.util.Scanner;
 public class Menu {
     private TaskManager manager;
     private Scanner scanner = new Scanner(System.in);
-    private TaskScore taskScore = new TaskScore(40);//점수
 
     public Menu(TaskManager manager) {this.manager = manager;}
 
@@ -11,6 +10,7 @@ public class Menu {
 
         manager.loadTasks();
         while (true) {
+            manager.applyDeadlinePenalty();
             System.out.println("\n===== 할 일 관리 =====");
             System.out.println("1. 등록\t2. 조회\t3. 검색\t4. 수정\t5. 삭제\t6. 나무\t0. 저장 및 종료");
             System.out.print("선택 : ");
@@ -80,7 +80,8 @@ public class Menu {
                     }
                     break;
                 case 6:
-                    taskScore.treeGrow(40);
+                    TaskScore taskScore = manager.getTaskScore();
+                    taskScore.treeGrow(taskScore.getScore());
                     break;
 
                 case 0:

@@ -6,23 +6,31 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.time.ZoneId;
 
 public class TaskManager {
     private String fileName;
     private List<Task> taskList = new ArrayList<>(); //Task객체를 담을 리스트
+    private String password;
+    private TaskScore taskScore = new TaskScore(0);
 
     public TaskManager(String fileName) {
         this.fileName = fileName;
     }
-
+    public TaskScore getTaskScore() {return taskScore;}
     // 파일 불러오기
     public void loadTasks() {
         try (Scanner scanner = new Scanner(new File(fileName), "UTF-8")) {
+            password = scanner.nextLine();
+            taskScore.setScore(Integer.parseInt(scanner.nextLine()));
+
+            taskList.clear();
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 String[] data = line.split("\\$", -1);
 
-                Task task = new Task(data[0], LocalDateTime.parse(data[1]), data[2], Integer.parseInt(data[3]), data[4]);
+                Task task = new Task(data[0], LocalDateTime.parse(data[1]), data[2], Integer.parseInt(data[3]),
+                        data[4],  Boolean.parseBoolean(data[5]));
                 taskList.add(task);
             }
         }
@@ -35,9 +43,12 @@ public class TaskManager {
     // 파일 저장하기
     public void saveTasks() {
         try (PrintWriter output = new PrintWriter(fileName)) {
+            output.println(password);
+            output.println(taskScore.getScore());
+
             for (Task task : taskList) {
                 output.println(
-                        task.getTaskName()+"$"+task.getDeadLine()+"$"+task.getSubName()+"$"+task.getProcess()+"$"+task.getMemo());
+                        task.getTaskName()+"$"+task.getDeadLine()+"$"+task.getSubName()+"$"+task.getProcess()+"$"+task.getMemo()+"$"+task.getPenalty());
             }
         } catch (FileNotFoundException e) {System.out.println("파일을 열 수 없습니다.");}
     }
@@ -76,9 +87,10 @@ public class TaskManager {
 
         if (memo.isBlank()) {memo = "메모 없음";}
 
-        Task task = new Task(taskName, deadLine, subName, process, memo);
+        Task task = new Task(taskName, deadLine, subName, process, memo, false);
 
         taskList.add(task);
+        taskScore.addScore(1);
         System.out.println("할 일이 등록되었습니다.");
     }
 
@@ -124,10 +136,6 @@ public class TaskManager {
                 count++;
             }
         } if (count == 0) {System.out.println("검색 결과가 없습니다.");}
-    }
-
-    public void checkTasks(String keyword) {
-
     }
 
     // 수정 : 과제명을 입력받아 내용을 변경
@@ -205,6 +213,8 @@ public class TaskManager {
 
         if (!subName.isBlank()) {selectedTask.setSubName(subName);}
 
+        boolean completed = false; // 진행도 100%를 채웠는지 여부(점수 부여용)
+
         while (true) {
             try {
                 System.out.print("새 진행도 (0/25/50/75/100, 엔터: 유지) : ");
@@ -219,7 +229,14 @@ public class TaskManager {
                     continue;
                 }
 
+                int oldProcess = selectedTask.getProcess();
                 selectedTask.setProcess(process);
+
+                //완료 여부 판정
+                if (oldProcess != 100 && process == 100) {
+                    taskScore.addScore(3);
+                    completed = true;}
+
                 break;
 
             } catch (NumberFormatException e) {System.out.println("진행도는 정수로 입력해주세요.");}
@@ -231,6 +248,7 @@ public class TaskManager {
         if (!memo.isBlank()) {selectedTask.setMemo(memo);}
 
         System.out.println("할 일이 수정되었습니다.");
+        if (completed) {System.out.println("과제 완료! (+3점)");}
     }
 
     // 선택 삭제 : 과제명을 입력받아 해당 과제를 삭제
@@ -282,5 +300,24 @@ public class TaskManager {
 
         if (count == 0) {System.out.println("완료된 할 일이 없습니다.");}
         else {System.out.println("완료된 할 일 " + count + "개를 삭제했습니다.");}
+    }
+
+    // 추가 기능 : 마감기한이 지난 과제가 있으면 점수 3점 차감(메뉴 호출 시 자동 실행)
+    public void applyDeadlinePenalty() {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        boolean changed = false;
+
+        for (Task task : taskList) {
+            if (task.getProcess() < 100
+                    && now.isAfter(task.getDeadLine())
+                    && !task.getPenalty()) {
+
+                taskScore.addScore(-3);
+                task.setPenalty(true);
+                changed = true;
+            }
+        }
+
+        if (changed) {saveTasks();}
     }
 }

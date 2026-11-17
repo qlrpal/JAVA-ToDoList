@@ -64,6 +64,7 @@ public class LoginManager {
 
             PrintWriter writer = new PrintWriter(file, "UTF-8");
             writer.println(password);
+            writer.println(0);
             writer.close();
 
             ids.add(id);
