@@ -1,6 +1,33 @@
 public class Ascii {
     //아스키 아프를 선언하고 함수로 객체형태로 활용하는 클래스
 
+    public String Loading(int count)  {
+        String load = "";
+        switch (count)  {
+            case 0 -> {
+                return "░░░░░░░░░░";
+            }
+            case 1 -> {
+                return "██░░░░░░░░";
+            }
+            case 2 -> {
+                return "████░░░░░░";
+            }
+            case 3 -> {
+                return "██████░░░░";
+            }
+            case 4 -> {
+                return "████████░░";
+            }
+            case 5 -> {
+                return "██████████";
+            }
+            default -> {
+                return "";
+            }
+        }
+    }
+
     String goodListArt =
             " ███   ███   ███  ████     █     ███  ████ █████ \n" +
                     "█     █   █ █   █ █   █    █      █  █       █   \n" +
