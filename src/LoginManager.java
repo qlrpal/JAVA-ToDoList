@@ -13,6 +13,10 @@ public class LoginManager {
     public void loadID(){
         ids.clear();
         File folder = new File("res");
+        if(!folder.exists())    {
+            folder.mkdir();
+            System.out.println("res 폴더가 존재하지 않아 생성했습니다.");
+        }
         File[] files = folder.listFiles();
 
         if (files == null) {return;}

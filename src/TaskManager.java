@@ -55,8 +55,16 @@ public class TaskManager {
 
     // 등록 : 사용자에게 정보를 입력받아 할 일 추가
     public void addTask(Scanner scanner) {
-        System.out.print("과제명 : ");
-        String taskName = scanner.nextLine();
+        String taskName;
+        while(true) {
+            System.out.print("과제명 : ");
+            taskName = scanner.nextLine();
+            if(taskName.contains("$"))  {
+                System.out.println("입력에 $는 작성할 수 없습니다.");
+                continue;
+            }
+            break;
+        }
 
         LocalDateTime deadLine;
         while (true) {
@@ -66,8 +74,16 @@ public class TaskManager {
             catch (DateTimeParseException e) {System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");}
         }
 
-        System.out.print("과목명 : ");
-        String subName = scanner.nextLine();
+        String subName;
+        while(true) {
+            System.out.print("과목명 : ");
+            subName = scanner.nextLine();
+            if(subName.contains("$"))   {
+                System.out.println("입력에 $는 작성할 수 없습니다.");
+                continue;
+            }
+            break;
+        }
 
         int process;
         while (true) {
@@ -82,8 +98,17 @@ public class TaskManager {
             catch (NumberFormatException e) {System.out.println("진행도는 정수로 입력해주세요.");}
         }
 
-        System.out.print("메모 (엔터 입력 시 메모 없음) : ");
-        String memo = scanner.nextLine();
+        String memo;
+        while (true) {
+            System.out.print("메모 (엔터 입력 시 메모 없음) : ");
+            memo = scanner.nextLine();
+            if(memo.contains("$"))  {
+                System.out.println("입력에 $는 작성할 수 없습니다.");
+                continue;
+            }
+            break;
+        }
+
 
         if (memo.isBlank()) {memo = "메모 없음";}
 
@@ -192,9 +217,19 @@ public class TaskManager {
             System.out.println("해당 과제명이 없습니다.");
             return;}
 
-        System.out.print("새 과제명 (엔터: 유지) : ");
-        String taskName = scanner.nextLine();
-        if (!taskName.isBlank()) {selectedTask.setTaskName(taskName);}
+        String taskName;
+        while (true) {
+            System.out.print("새 과제명 (엔터: 유지) : ");
+            taskName = scanner.nextLine();
+            if (taskName.contains("$")) {
+                System.out.println("입력에 $는 작성할 수 없습니다.");
+                continue;
+            }
+            if (!taskName.isBlank()) {
+                selectedTask.setTaskName(taskName);
+            }
+            break;
+        }
 
         while (true) {
             try {
@@ -208,10 +243,19 @@ public class TaskManager {
             }
         }
 
-        System.out.print("새 과목명 (엔터: 유지) : ");
-        String subName = scanner.nextLine();
-
-        if (!subName.isBlank()) {selectedTask.setSubName(subName);}
+        String subName;
+        while (true) {
+            System.out.print("새 과목명 (엔터: 유지) : ");
+            subName = scanner.nextLine();
+            if (subName.contains("$")) {
+                System.out.println("입력에 $는 작성할 수 없습니다.");
+                continue;
+            }
+            if (!subName.isBlank()) {
+                selectedTask.setSubName(subName);
+            }
+            break;
+        }
 
         boolean completed = false; // 진행도 100%를 채웠는지 여부(점수 부여용)
 
@@ -242,10 +286,19 @@ public class TaskManager {
             } catch (NumberFormatException e) {System.out.println("진행도는 정수로 입력해주세요.");}
         }
 
-        System.out.print("새 메모 (엔터: 유지) : ");
-        String memo = scanner.nextLine();
-
-        if (!memo.isBlank()) {selectedTask.setMemo(memo);}
+        String memo;
+        while (true) {
+            System.out.print("새 메모 (엔터: 유지) : ");
+            memo = scanner.nextLine();
+            if (memo.contains("$")) {
+                System.out.println("입력에 $는 작성할 수 없습니다.");
+                continue;
+            }
+            if (!memo.isBlank()) {
+                selectedTask.setMemo(memo);
+            }
+            break;
+        }
 
         System.out.println("할 일이 수정되었습니다.");
         if (completed) {System.out.println("과제 완료! (+3점)");}
