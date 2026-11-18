@@ -128,11 +128,16 @@ public class TaskManager {
 
             if (!includeCompleted && task.getProcess() == 100) {continue;}
 
+            long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
+                    java.time.LocalDate.now(), task.getDeadLine().toLocalDate()
+            );
+
             System.out.println("과제명 : " + task.getTaskName());
             System.out.println("마감기한 : " + task.getDeadLine());
             System.out.println("과목명 : " + task.getSubName());
             System.out.println("진행도 : " + (task.getProcess() == 100 ? "완료" : task.getProcess()+"% 진행 중"));
             System.out.println("메모 : " + task.getMemo());
+            System.out.println("남은 기한 : " + (daysLeft > 0 ? "D-" + daysLeft : daysLeft == 0 ? "D-Day" : "D+" + (-daysLeft)));
             System.out.println("--------------------");
 
             count++;
