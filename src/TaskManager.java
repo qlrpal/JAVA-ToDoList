@@ -1,12 +1,12 @@
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.time.ZoneId;
 
 public class TaskManager {
     private String fileName;
@@ -17,49 +17,120 @@ public class TaskManager {
     public TaskManager(String fileName) {
         this.fileName = fileName;
     }
-    public TaskScore getTaskScore() {return taskScore;}
+
+    public TaskScore getTaskScore() {
+        return taskScore;
+    }
+
     // 파일 불러오기
-    public void loadTasks() {
-        try (Scanner scanner = new Scanner(new File(fileName), "UTF-8")) {
-            password = scanner.nextLine();
-            taskScore.setScore(Integer.parseInt(scanner.nextLine()));
-
-            taskList.clear();
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                String[] data = line.split("\\$", -1);
-
-                Task task = new Task(data[0], LocalDateTime.parse(data[1]), data[2], Integer.parseInt(data[3]),
-                        data[4],  Boolean.parseBoolean(data[5]));
-                taskList.add(task);
+    public boolean loadTasks() {
+        try (Scanner reader = new Scanner(new File(fileName), "UTF-8")) {
+            if (!reader.hasNextLine()) {
+                throw new IllegalArgumentException("계정 파일에 비밀번호가 없습니다.");
             }
+            String savedPassword = reader.nextLine();
+
+            if (!reader.hasNextLine()) {
+                throw new IllegalArgumentException("계정 파일에 저장된 점수가 없습니다.");
+            }
+            int savedScore = Integer.parseInt(reader.nextLine());
+            List<Task> loaded = new ArrayList<>();
+
+            while (reader.hasNextLine()) {
+                String line = reader.nextLine();
+                if (line.isBlank()) {
+                    continue;
+                }
+
+                String[] data = line.split("\\$", -1);
+                if (data.length < 5 || data.length > 6) {
+                    throw new IllegalArgumentException("과제 데이터 형식이 잘못되었습니다.");
+                }
+
+                loaded.add(new Task(
+                        data[0],
+                        LocalDateTime.parse(data[1]),
+                        data[2],
+                        Integer.parseInt(data[3]),
+                        data[4],
+                        data.length == 6 && Boolean.parseBoolean(data[5])
+                ));
+            }
+
+            if (reader.ioException() != null) {
+                throw reader.ioException();
+            }
+
+            password = savedPassword;
+            taskScore.setScore(savedScore);
+            taskList = loaded;
+            return true;
+        } catch (IOException | IllegalArgumentException | DateTimeParseException e) {
+            System.out.println("파일을 불러오지 못했습니다. " + e.getMessage());
+            return false;
         }
-        catch (FileNotFoundException e) {System.out.println("파일을 찾을 수 없습니다.");}
-        catch (ArrayIndexOutOfBoundsException e) {System.out.println("누락된 데이터가 있습니다.");}
-        catch (DateTimeParseException e) {System.out.println("날짜형식이 잘못되었습니다.");}
-        catch (	NumberFormatException e) {System.out.println("데이터의 형식이 올바르지 않습니다.");}
     }
 
     // 파일 저장하기
-    public void saveTasks() {
-        try (PrintWriter output = new PrintWriter(fileName)) {
+    public boolean saveTasks() {
+        if (password == null) {
+            System.out.println("계정 파일을 먼저 불러와야 합니다.");
+            return false;
+        }
+
+        try (PrintWriter output = new PrintWriter(fileName, "UTF-8")) {
             output.println(password);
             output.println(taskScore.getScore());
 
             for (Task task : taskList) {
-                output.println(
-                        task.getTaskName()+"$"+task.getDeadLine()+"$"+task.getSubName()+"$"+task.getProcess()+"$"+task.getMemo()+"$"+task.getPenalty());
+                output.println(task.getTaskName() + "$" + task.getDeadLine()
+                        + "$" + task.getSubName() + "$" + task.getProcess()
+                        + "$" + task.getMemo() + "$" + task.getPenalty());
             }
-        } catch (FileNotFoundException e) {System.out.println("파일을 열 수 없습니다.");}
+
+            if (output.checkError()) {
+                System.out.println("파일을 저장하지 못했습니다.");
+                return false;
+            }
+
+            return true;
+        } catch (IOException e) {
+            System.out.println("파일을 저장하지 못했습니다.");
+            return false;
+        }
+    }
+
+    public List<Task> getTasks() {
+        return new ArrayList<>(taskList);
+    }
+
+    public void addTask(Task task) {
+        taskList.add(task);
+        taskScore.addScore(1);
+    }
+
+    public boolean updateProgress(Task task, int progress) {
+        boolean completed = task.getProcess() != 100 && progress == 100;
+        task.setProcess(progress);
+
+        if (completed) {
+            taskScore.addScore(3);
+        }
+        return completed;
+    }
+
+    public void removeTask(Task task) {
+        taskList.remove(task);
     }
 
     // 등록 : 사용자에게 정보를 입력받아 할 일 추가
     public void addTask(Scanner scanner) {
         String taskName;
-        while(true) {
+        while (true) {
             System.out.print("과제명 : ");
             taskName = scanner.nextLine();
-            if(taskName.contains("$"))  {
+
+            if (taskName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
                 continue;
             }
@@ -68,17 +139,21 @@ public class TaskManager {
 
         LocalDateTime deadLine;
         while (true) {
-            try {System.out.print("마감기한 (예: 2026-11-25T23:59) : ");
+            try {
+                System.out.print("마감기한 (예: 2026-11-25T23:59) : ");
                 deadLine = LocalDateTime.parse(scanner.nextLine());
-                break;}
-            catch (DateTimeParseException e) {System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");}
+                break;
+            } catch (DateTimeParseException e) {
+                System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");
+            }
         }
 
         String subName;
-        while(true) {
+        while (true) {
             System.out.print("과목명 : ");
             subName = scanner.nextLine();
-            if(subName.contains("$"))   {
+
+            if (subName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
                 continue;
             }
@@ -87,35 +162,39 @@ public class TaskManager {
 
         int process;
         while (true) {
-            try {System.out.print("진행도 (0/25/50/75/100, 엔터 입력 시 0) : ");
+            try {
+                System.out.print("진행도 (0/25/50/75/100, 엔터 입력 시 0) : ");
                 String input = scanner.nextLine();
                 process = input.isBlank() ? 0 : Integer.parseInt(input);
 
                 if (process < 0 || process > 100 || process % 25 != 0) {
                     System.out.println("0, 25, 50, 75, 100 중 입력해주세요.");
-                    continue;}
-                break;}
-            catch (NumberFormatException e) {System.out.println("진행도는 정수로 입력해주세요.");}
+                    continue;
+                }
+                break;
+            } catch (NumberFormatException e) {
+                System.out.println("진행도는 정수로 입력해주세요.");
+            }
         }
 
         String memo;
         while (true) {
             System.out.print("메모 (엔터 입력 시 메모 없음) : ");
             memo = scanner.nextLine();
-            if(memo.contains("$"))  {
+
+            if (memo.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
                 continue;
             }
             break;
         }
 
-
-        if (memo.isBlank()) {memo = "메모 없음";}
+        if (memo.isBlank()) {
+            memo = "메모 없음";
+        }
 
         Task task = new Task(taskName, deadLine, subName, process, memo, false);
-
-        taskList.add(task);
-        taskScore.addScore(1);
+        addTask(task);
         System.out.println("할 일이 등록되었습니다.");
     }
 
@@ -126,7 +205,9 @@ public class TaskManager {
         for (int i = 0; i < taskList.size(); i++) {
             Task task = taskList.get(i);
 
-            if (!includeCompleted && task.getProcess() == 100) {continue;}
+            if (!includeCompleted && task.getProcess() == 100) {
+                continue;
+            }
 
             long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
                     java.time.LocalDate.now(), task.getDeadLine().toLocalDate()
@@ -135,13 +216,16 @@ public class TaskManager {
             System.out.println("과제명 : " + task.getTaskName());
             System.out.println("마감기한 : " + task.getDeadLine());
             System.out.println("과목명 : " + task.getSubName());
-            System.out.println("진행도 : " + (task.getProcess() == 100 ? "완료" : task.getProcess()+"% 진행 중"));
+            System.out.println("진행도 : "
+                    + (task.getProcess() == 100 ? "완료" : task.getProcess() + "% 진행 중"));
             System.out.println("메모 : " + task.getMemo());
-            System.out.println("남은 기한 : " + (daysLeft > 0 ? "D-" + daysLeft : daysLeft == 0 ? "D-Day" : "D+" + (-daysLeft)));
+            System.out.println("남은 기한 : "
+                    + (daysLeft > 0 ? "D-" + daysLeft : daysLeft == 0 ? "D-Day" : "D+" + (-daysLeft)));
             System.out.println("--------------------");
 
             count++;
         }
+
         if (count == 0) {
             System.out.println("조회할 할 일이 없습니다.");
         }
@@ -155,17 +239,21 @@ public class TaskManager {
             Task task = taskList.get(i);
 
             if (task.getSubName().contains(keyword) || task.getTaskName().contains(keyword)) {
-
                 System.out.println("과제명: " + task.getTaskName());
                 System.out.println("마감기한: " + task.getDeadLine());
                 System.out.println("과목명: " + task.getSubName());
-                System.out.println("진행도: " + (task.getProcess() == 100 ? "완료" : task.getProcess() + "% 진행 중"));
+                System.out.println("진행도: "
+                        + (task.getProcess() == 100 ? "완료" : task.getProcess() + "% 진행 중"));
                 System.out.println("메모: " + task.getMemo());
                 System.out.println("--------------------");
 
                 count++;
             }
-        } if (count == 0) {System.out.println("검색 결과가 없습니다.");}
+        }
+
+        if (count == 0) {
+            System.out.println("검색 결과가 없습니다.");
+        }
     }
 
     // 수정 : 과제명을 입력받아 내용을 변경
@@ -190,26 +278,24 @@ public class TaskManager {
                 Task task = taskList.get(i);
 
                 if (task.getSubName().contains(name) || task.getTaskName().contains(name)) {
-
-                    System.out.println("과제 : " + task.getTaskName() + " | " + task.getSubName() + " | "
-                            + task.getDeadLine() + " | " + (task.getProcess() == 100 ? "완료" : "(" + task.getProcess() + "/100%)"));
-
-
+                    System.out.println("과제 : " + task.getTaskName() + " | "
+                            + task.getSubName() + " | " + task.getDeadLine() + " | "
+                            + (task.getProcess() == 100 ? "완료" : "(" + task.getProcess() + "/100%)"));
                     count++;
-
                 }
             }
+
             if (count == 0) {
                 System.out.println("검색 결과가 없습니다.");
                 System.out.println("--------------------");
                 return;
             }
-            System.out.println("--------------------");
 
+            System.out.println("--------------------");
             System.out.print("수정할 과제명 : ");
             String realname = scanner.nextLine();
 
-            for (Task task1 : taskList) { // 입력받은 과제를 검색
+            for (Task task1 : taskList) {
                 if (task1.getTaskName().equals(realname)) {
                     selectedTask = task1;
                     break;
@@ -217,15 +303,16 @@ public class TaskManager {
             }
         }
 
-
         if (selectedTask == null) {
             System.out.println("해당 과제명이 없습니다.");
-            return;}
+            return;
+        }
 
         String taskName;
         while (true) {
             System.out.print("새 과제명 (엔터: 유지) : ");
             taskName = scanner.nextLine();
+
             if (taskName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
                 continue;
@@ -241,10 +328,12 @@ public class TaskManager {
                 System.out.print("새 마감기한 (예: 2026-11-25T23:59, 엔터: 유지) : ");
                 String input = scanner.nextLine();
 
-                if (!input.isBlank()) {selectedTask.setDeadLine(LocalDateTime.parse(input));}
+                if (!input.isBlank()) {
+                    selectedTask.setDeadLine(LocalDateTime.parse(input));
+                }
                 break;
-            }
-            catch (DateTimeParseException e) {System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");
+            } catch (DateTimeParseException e) {
+                System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");
             }
         }
 
@@ -252,6 +341,7 @@ public class TaskManager {
         while (true) {
             System.out.print("새 과목명 (엔터: 유지) : ");
             subName = scanner.nextLine();
+
             if (subName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
                 continue;
@@ -269,32 +359,28 @@ public class TaskManager {
                 System.out.print("새 진행도 (0/25/50/75/100, 엔터: 유지) : ");
                 String input = scanner.nextLine();
 
-                if (input.isBlank()) {break;}
+                if (input.isBlank()) {
+                    break;
+                }
 
                 int process = Integer.parseInt(input);
-
                 if (process < 0 || process > 100 || process % 25 != 0) {
                     System.out.println("0, 25, 50, 75, 100 중 입력해주세요.");
                     continue;
                 }
 
-                int oldProcess = selectedTask.getProcess();
-                selectedTask.setProcess(process);
-
-                //완료 여부 판정
-                if (oldProcess != 100 && process == 100) {
-                    taskScore.addScore(3);
-                    completed = true;}
-
+                completed = updateProgress(selectedTask, process);
                 break;
-
-            } catch (NumberFormatException e) {System.out.println("진행도는 정수로 입력해주세요.");}
+            } catch (NumberFormatException e) {
+                System.out.println("진행도는 정수로 입력해주세요.");
+            }
         }
 
         String memo;
         while (true) {
             System.out.print("새 메모 (엔터: 유지) : ");
             memo = scanner.nextLine();
+
             if (memo.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
                 continue;
@@ -306,7 +392,9 @@ public class TaskManager {
         }
 
         System.out.println("할 일이 수정되었습니다.");
-        if (completed) {System.out.println("과제 완료! (+3점)");}
+        if (completed) {
+            System.out.println("과제 완료! (+3점)");
+        }
     }
 
     // 선택 삭제 : 과제명을 입력받아 해당 과제를 삭제
@@ -321,12 +409,14 @@ public class TaskManager {
         for (int i = 0; i < taskList.size(); i++) {
             Task task = taskList.get(i);
 
-            if (!includeCompleted && task.getProcess() == 100) {continue;}
+            if (!includeCompleted && task.getProcess() == 100) {
+                continue;
+            }
 
-            System.out.println("과제명 : " + task.getTaskName()+" | ("+(task.getProcess()+"/100%)"));
-
+            System.out.println("과제명 : " + task.getTaskName() + " | (" + task.getProcess() + "/100%)");
             count++;
         }
+
         if (count == 0) {
             System.out.println("조회할 할 일이 없습니다.");
         }
@@ -356,12 +446,30 @@ public class TaskManager {
             }
         }
 
-        if (count == 0) {System.out.println("완료된 할 일이 없습니다.");}
-        else {System.out.println("완료된 할 일 " + count + "개를 삭제했습니다.");}
+        if (count == 0) {
+            System.out.println("완료된 할 일이 없습니다.");
+        } else {
+            System.out.println("완료된 할 일 " + count + "개를 삭제했습니다.");
+        }
     }
 
     // 추가 기능 : 마감기한이 지난 과제가 있으면 점수 3점 차감(메뉴 호출 시 자동 실행)
-    public void applyDeadlinePenalty() {
+    public boolean applyDeadlinePenalty() {
+        return applyDeadlinePenalty(false);
+    }
+
+    // 과제 등록·수정·삭제 후에는 차감 여부와 관계없이 저장한다.
+    public boolean applyDeadlinePenalty(boolean saveChanges) {
+        boolean changed = updateDeadlinePenalties();
+
+        if (changed || saveChanges) {
+            return saveTasks();
+        }
+
+        return true;
+    }
+
+    private boolean updateDeadlinePenalties() {
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         boolean changed = false;
 
@@ -369,13 +477,12 @@ public class TaskManager {
             if (task.getProcess() < 100
                     && now.isAfter(task.getDeadLine())
                     && !task.getPenalty()) {
-
                 taskScore.addScore(-3);
                 task.setPenalty(true);
                 changed = true;
             }
         }
 
-        if (changed) {saveTasks();}
+        return changed;
     }
 }
