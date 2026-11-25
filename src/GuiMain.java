@@ -6,7 +6,7 @@ public class GuiMain {
         SwingUtilities.invokeLater(GuiMain::showLogin);
     }
 
-    private static void showLogin() {
+    static void showLogin() {
         LoginManager loginManager = new LoginManager();
 
         while (true) {
@@ -32,7 +32,7 @@ public class GuiMain {
                 continue;
             }
 
-            TodoFrame frame = new TodoFrame(id, manager, GuiMain::showLogin);
+            TodoFrame frame = new TodoFrame(id, manager);
             frame.setVisible(true);
             return;
         }

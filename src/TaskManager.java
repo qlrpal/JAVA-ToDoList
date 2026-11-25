@@ -25,22 +25,16 @@ public class TaskManager {
     // 파일 불러오기
     public boolean loadTasks() {
         try (Scanner reader = new Scanner(new File(fileName), "UTF-8")) {
-            if (!reader.hasNextLine()) {
-                throw new IllegalArgumentException("계정 파일에 비밀번호가 없습니다.");
-            }
+            if (!reader.hasNextLine()) {throw new IllegalArgumentException("계정 파일에 비밀번호가 없습니다.");}
             String savedPassword = reader.nextLine();
 
-            if (!reader.hasNextLine()) {
-                throw new IllegalArgumentException("계정 파일에 저장된 점수가 없습니다.");
-            }
+            if (!reader.hasNextLine()) {throw new IllegalArgumentException("계정 파일에 저장된 점수가 없습니다.");}
             int savedScore = Integer.parseInt(reader.nextLine());
             List<Task> loaded = new ArrayList<>();
 
             while (reader.hasNextLine()) {
                 String line = reader.nextLine();
-                if (line.isBlank()) {
-                    continue;
-                }
+                if (line.isBlank()) {continue;}
 
                 String[] data = line.split("\\$", -1);
                 if (data.length < 5 || data.length > 6) {
@@ -75,8 +69,7 @@ public class TaskManager {
     public boolean saveTasks() {
         if (password == null) {
             System.out.println("계정 파일을 먼저 불러와야 합니다.");
-            return false;
-        }
+            return false;}
 
         try (PrintWriter output = new PrintWriter(fileName, "UTF-8")) {
             output.println(password);
@@ -85,43 +78,33 @@ public class TaskManager {
             for (Task task : taskList) {
                 output.println(task.getTaskName() + "$" + task.getDeadLine()
                         + "$" + task.getSubName() + "$" + task.getProcess()
-                        + "$" + task.getMemo() + "$" + task.getPenalty());
-            }
+                        + "$" + task.getMemo() + "$" + task.getPenalty());}
 
             if (output.checkError()) {
                 System.out.println("파일을 저장하지 못했습니다.");
-                return false;
-            }
+                return false;}
 
-            return true;
-        } catch (IOException e) {
+            return true;}
+            catch (IOException e) {
             System.out.println("파일을 저장하지 못했습니다.");
-            return false;
-        }
+            return false;}
     }
 
-    public List<Task> getTasks() {
-        return new ArrayList<>(taskList);
-    }
+    public List<Task> getTasks() {return new ArrayList<>(taskList);}
 
     public void addTask(Task task) {
         taskList.add(task);
-        taskScore.addScore(1);
-    }
+        taskScore.addScore(1);}
 
     public boolean updateProgress(Task task, int progress) {
         boolean completed = task.getProcess() != 100 && progress == 100;
         task.setProcess(progress);
 
-        if (completed) {
-            taskScore.addScore(3);
-        }
+        if (completed) {taskScore.addScore(3);}
         return completed;
     }
 
-    public void removeTask(Task task) {
-        taskList.remove(task);
-    }
+    public void removeTask(Task task) {taskList.remove(task);}
 
     // 등록 : 사용자에게 정보를 입력받아 할 일 추가
     public void addTask(Scanner scanner) {
@@ -132,19 +115,14 @@ public class TaskManager {
 
             if (taskName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
-                continue;
-            }
-            break;
-        }
+                continue;}
+            break;}
 
         LocalDateTime deadLine;
         while (true) {
-            try {
-                System.out.print("마감기한 (예: 2026-11-25T23:59) : ");
+            try {System.out.print("마감기한 (예: 2026-11-25T23:59) : ");
                 deadLine = LocalDateTime.parse(scanner.nextLine());
-                break;
-            } catch (DateTimeParseException e) {
-                System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");
+                break;} catch (DateTimeParseException e) {System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");
             }
         }
 
@@ -155,8 +133,7 @@ public class TaskManager {
 
             if (subName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
-                continue;
-            }
+                continue;}
             break;
         }
 
@@ -169,12 +146,8 @@ public class TaskManager {
 
                 if (process < 0 || process > 100 || process % 25 != 0) {
                     System.out.println("0, 25, 50, 75, 100 중 입력해주세요.");
-                    continue;
-                }
-                break;
-            } catch (NumberFormatException e) {
-                System.out.println("진행도는 정수로 입력해주세요.");
-            }
+                    continue;}
+                break;} catch (NumberFormatException e) {System.out.println("진행도는 정수로 입력해주세요.");}
         }
 
         String memo;
@@ -189,9 +162,7 @@ public class TaskManager {
             break;
         }
 
-        if (memo.isBlank()) {
-            memo = "메모 없음";
-        }
+        if (memo.isBlank()) {memo = "메모 없음";}
 
         Task task = new Task(taskName, deadLine, subName, process, memo, false);
         addTask(task);
@@ -209,9 +180,7 @@ public class TaskManager {
                 continue;
             }
 
-            long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
-                    java.time.LocalDate.now(), task.getDeadLine().toLocalDate()
-            );
+            long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), task.getDeadLine().toLocalDate());
 
             System.out.println("과제명 : " + task.getTaskName());
             System.out.println("마감기한 : " + task.getDeadLine());
@@ -226,9 +195,7 @@ public class TaskManager {
             count++;
         }
 
-        if (count == 0) {
-            System.out.println("조회할 할 일이 없습니다.");
-        }
+        if (count == 0) {System.out.println("조회할 할 일이 없습니다.");}
     }
 
     // 검색 : 과제명이나 과목명에 검색어가 포함된 할 일을 출력
@@ -251,9 +218,7 @@ public class TaskManager {
             }
         }
 
-        if (count == 0) {
-            System.out.println("검색 결과가 없습니다.");
-        }
+        if (count == 0) {System.out.println("검색 결과가 없습니다.");}
     }
 
     // 수정 : 과제명을 입력받아 내용을 변경
@@ -267,8 +232,7 @@ public class TaskManager {
             if (task1.getTaskName().equals(name)) {
                 selectedTask = task1;
                 real = true;
-                break;
-            }
+                break;}
         }
 
         if (!real) {
@@ -288,8 +252,7 @@ public class TaskManager {
             if (count == 0) {
                 System.out.println("검색 결과가 없습니다.");
                 System.out.println("--------------------");
-                return;
-            }
+                return;}
 
             System.out.println("--------------------");
             System.out.print("수정할 과제명 : ");
@@ -298,15 +261,13 @@ public class TaskManager {
             for (Task task1 : taskList) {
                 if (task1.getTaskName().equals(realname)) {
                     selectedTask = task1;
-                    break;
-                }
+                    break;}
             }
         }
 
         if (selectedTask == null) {
             System.out.println("해당 과제명이 없습니다.");
-            return;
-        }
+            return;}
 
         String taskName;
         while (true) {
@@ -315,11 +276,9 @@ public class TaskManager {
 
             if (taskName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
-                continue;
-            }
+                continue;}
             if (!taskName.isBlank()) {
-                selectedTask.setTaskName(taskName);
-            }
+                selectedTask.setTaskName(taskName);}
             break;
         }
 
@@ -328,13 +287,8 @@ public class TaskManager {
                 System.out.print("새 마감기한 (예: 2026-11-25T23:59, 엔터: 유지) : ");
                 String input = scanner.nextLine();
 
-                if (!input.isBlank()) {
-                    selectedTask.setDeadLine(LocalDateTime.parse(input));
-                }
-                break;
-            } catch (DateTimeParseException e) {
-                System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");
-            }
+                if (!input.isBlank()) {selectedTask.setDeadLine(LocalDateTime.parse(input));}
+                break;} catch (DateTimeParseException e) {System.out.println("날짜형식이 잘못되었습니다. 다시 입력해주세요.");}
         }
 
         String subName;
@@ -344,11 +298,8 @@ public class TaskManager {
 
             if (subName.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
-                continue;
-            }
-            if (!subName.isBlank()) {
-                selectedTask.setSubName(subName);
-            }
+                continue;}
+            if (!subName.isBlank()) {selectedTask.setSubName(subName);}
             break;
         }
 
@@ -359,21 +310,16 @@ public class TaskManager {
                 System.out.print("새 진행도 (0/25/50/75/100, 엔터: 유지) : ");
                 String input = scanner.nextLine();
 
-                if (input.isBlank()) {
-                    break;
-                }
+                if (input.isBlank()) {break;}
 
                 int process = Integer.parseInt(input);
                 if (process < 0 || process > 100 || process % 25 != 0) {
                     System.out.println("0, 25, 50, 75, 100 중 입력해주세요.");
-                    continue;
-                }
+                    continue;}
 
                 completed = updateProgress(selectedTask, process);
                 break;
-            } catch (NumberFormatException e) {
-                System.out.println("진행도는 정수로 입력해주세요.");
-            }
+            } catch (NumberFormatException e) {System.out.println("진행도는 정수로 입력해주세요.");}
         }
 
         String memo;
@@ -383,43 +329,33 @@ public class TaskManager {
 
             if (memo.contains("$")) {
                 System.out.println("입력에 $는 작성할 수 없습니다.");
-                continue;
-            }
-            if (!memo.isBlank()) {
-                selectedTask.setMemo(memo);
-            }
+                continue;}
+            if (!memo.isBlank()) {selectedTask.setMemo(memo);}
             break;
         }
 
         System.out.println("할 일이 수정되었습니다.");
-        if (completed) {
-            System.out.println("과제 완료! (+3점)");
-        }
+        if (completed) {System.out.println("과제 완료! (+3점)");}
     }
 
     // 선택 삭제 : 과제명을 입력받아 해당 과제를 삭제
     public void deleteTask(Scanner scanner, boolean includeCompleted) {
         if (taskList.isEmpty()) {
             System.out.println("삭제할 할 일이 없습니다.");
-            return;
-        }
+            return;}
 
         int count = 0;
 
         for (int i = 0; i < taskList.size(); i++) {
             Task task = taskList.get(i);
 
-            if (!includeCompleted && task.getProcess() == 100) {
-                continue;
-            }
+            if (!includeCompleted && task.getProcess() == 100) {continue;}
 
             System.out.println("과제명 : " + task.getTaskName() + " | (" + task.getProcess() + "/100%)");
             count++;
         }
 
-        if (count == 0) {
-            System.out.println("조회할 할 일이 없습니다.");
-        }
+        if (count == 0) {System.out.println("조회할 할 일이 없습니다.");}
 
         System.out.print("삭제할 과제명 : ");
         String taskName = scanner.nextLine();
@@ -446,25 +382,18 @@ public class TaskManager {
             }
         }
 
-        if (count == 0) {
-            System.out.println("완료된 할 일이 없습니다.");
-        } else {
-            System.out.println("완료된 할 일 " + count + "개를 삭제했습니다.");
-        }
+        if (count == 0) {System.out.println("완료된 할 일이 없습니다.");}
+        else {System.out.println("완료된 할 일 " + count + "개를 삭제했습니다.");}
     }
 
     // 추가 기능 : 마감기한이 지난 과제가 있으면 점수 3점 차감(메뉴 호출 시 자동 실행)
-    public boolean applyDeadlinePenalty() {
-        return applyDeadlinePenalty(false);
-    }
+    public boolean applyDeadlinePenalty() {return applyDeadlinePenalty(false);}
 
     // 과제 등록·수정·삭제 후에는 차감 여부와 관계없이 저장한다.
     public boolean applyDeadlinePenalty(boolean saveChanges) {
         boolean changed = updateDeadlinePenalties();
 
-        if (changed || saveChanges) {
-            return saveTasks();
-        }
+        if (changed || saveChanges) {return saveTasks();}
 
         return true;
     }

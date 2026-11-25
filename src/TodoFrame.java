@@ -2,16 +2,19 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 
 public class TodoFrame extends JFrame {
-    // 화면에서 공통으로 사용하는 색상과 날짜 표시 형식, 시간대
     private static final Color BACKGROUND = new Color(242, 246, 249);
     private static final Color NAVY = new Color(24, 47, 67);
     private static final Color TEAL = new Color(0, 115, 105);
@@ -19,23 +22,20 @@ public class TodoFrame extends JFrame {
     private static final DateTimeFormatter DISPLAY_DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
-    // 과제 데이터는 TaskManager가 관리하고, logout은 로그인 화면으로 돌아가는 동작을 담는다.
     private final TaskManager manager;
-    private final Runnable logout;
-    private final JLabel score = new JLabel();
-    private final JTextField search = new JTextField();
-    private final JComboBox<String> filter = new JComboBox<>(new String[]{"전체", "진행 중"});
-    private final JPanel cards = new JPanel(new GridLayout(0, 1, 0, 10));
+    private final JLabel scoreLabel = new JLabel();
+    private final JTextField searchField = new JTextField();
+    private final JComboBox<String> taskFilter = new JComboBox<>(new String[]{"전체", "진행 중"});
+    private final JPanel cardsPanel = new JPanel(new GridLayout(0, 1, 0, 10));
 
-    public TodoFrame(String id, TaskManager manager, Runnable logout) {
+    // 창 설정
+    public TodoFrame(String id, TaskManager manager) {
         super("할 일 관리");
         this.manager = manager;
-        this.logout = logout;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(700, 440));
         setSize(940, 620);
         setLocationRelativeTo(null);
-
 
         JPanel root = new JPanel(new BorderLayout());
         root.add(createSidebar(id), BorderLayout.WEST);
@@ -43,15 +43,20 @@ public class TodoFrame extends JFrame {
         setContentPane(root);
         refreshCards();
 
-        // 30초마다 과제 마감 여부 갱신
+        setupDeadlineTimer();
+    }
+
+    //마감 여부 갱신
+    private void setupDeadlineTimer() {
         Timer timer = new Timer(30_000, event -> {
-            if (!isActive()) {return;}
-            refreshAfterSave(manager.applyDeadlinePenalty());
+            if (isActive()) {refreshAfterSave(manager.applyDeadlinePenalty());}
         });
-        // 타이머 열기 닫기
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override public void windowOpened(java.awt.event.WindowEvent event) {timer.start();}
-            @Override public void windowClosed(java.awt.event.WindowEvent event) {timer.stop();}
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowOpened(WindowEvent event) {timer.start();}
+
+            @Override
+            public void windowClosed(WindowEvent event) {timer.stop();}
         });
     }
 
@@ -78,14 +83,11 @@ public class TodoFrame extends JFrame {
         //좌측 패널 하단 : 현재 점수, 로그아웃/종료 버튼
         JPanel actions = new JPanel(new GridLayout(0, 1, 0, 8));
         actions.setOpaque(false);
-        score.setForeground(Color.WHITE);
-        score.setFont(score.getFont().deriveFont(Font.BOLD, 16f));
-        actions.add(score);
+        scoreLabel.setForeground(Color.WHITE);
+        scoreLabel.setFont(scoreLabel.getFont().deriveFont(Font.BOLD, 16f));
+        actions.add(scoreLabel);
         JButton logoutButton = new JButton("로그아웃");
-        logoutButton.addActionListener(event -> {
-            dispose();
-            logout.run();
-        });
+        logoutButton.addActionListener(event -> returnToLogin());
         actions.add(logoutButton);
         JButton exitButton = new JButton("종료");
         exitButton.addActionListener(event -> dispose());
@@ -100,7 +102,14 @@ public class TodoFrame extends JFrame {
         main.setBorder(BorderFactory.createEmptyBorder(22, 24, 18, 24));
         main.setBackground(BACKGROUND);
 
-        // 메인 패널 상단 — 제목, 검색창, 필터
+        main.add(createSearchHeader(), BorderLayout.NORTH);
+        main.add(createTaskScrollPane(), BorderLayout.CENTER);
+        main.add(createRegisterFooter(), BorderLayout.SOUTH);
+        return main;
+    }
+
+    // 메인 패널 상단 — 제목, 검색창, 필터
+    private JPanel createSearchHeader() {
         JPanel header = new JPanel(new BorderLayout(0, 12));
         header.setOpaque(false);
         JLabel title = new JLabel("과제 목록");
@@ -113,80 +122,104 @@ public class TodoFrame extends JFrame {
 
         // 검색창
         JLabel searchLabel = new JLabel("검색");
-        searchLabel.setLabelFor(search);
-        search.setToolTipText("과제명 또는 과목명으로 검색"); //툴 팁 표시(커서 가져다 대면 나옴)
-        search.setPreferredSize(new Dimension(0, 34));
+        searchLabel.setLabelFor(searchField);
+        searchField.setToolTipText("과제명 또는 과목명으로 검색"); //툴 팁 표시(커서 가져다 대면 나옴)
+        searchField.setPreferredSize(new Dimension(0, 34));
         // 검색창 내용 수정시 즉각 반응
-        search.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent event) { refreshCards(); }
-            @Override public void removeUpdate(DocumentEvent event) { refreshCards(); }
-            @Override public void changedUpdate(DocumentEvent event) { refreshCards(); }});
-        filter.addActionListener(event -> refreshCards()); // 필터 변경 표시
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                refreshCards();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                refreshCards();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                refreshCards();
+            }
+        });
+        taskFilter.addActionListener(event -> refreshCards()); // 필터 변경 표시
 
         toolbar.add(searchLabel, BorderLayout.WEST);
-        toolbar.add(search, BorderLayout.CENTER);
-        toolbar.add(filter, BorderLayout.EAST);
+        toolbar.add(searchField, BorderLayout.CENTER);
+        toolbar.add(taskFilter, BorderLayout.EAST);
         header.add(toolbar, BorderLayout.CENTER);
-        main.add(header, BorderLayout.NORTH);
+        return header;
+    }
 
+    //과제 카드를 넣을 스크롤 패널
+    private JScrollPane createTaskScrollPane() {
         // 중단부 — 스크롤 가능한 과제 카드 목록
-        cards.setOpaque(false);
+        cardsPanel.setOpaque(false);
 
         JPanel list = new JPanel(new BorderLayout());
         list.setBackground(BACKGROUND);
 
         // 카드가 화면 위쪽부터 쌓이도록 목록 패널의 NORTH에 배치한다.
-        list.add(cards, BorderLayout.NORTH);
+        list.add(cardsPanel, BorderLayout.NORTH);
 
         JScrollPane scroll = new JScrollPane(list);
         scroll.setBorder(BorderFactory.createEmptyBorder());
         scroll.getVerticalScrollBar().setUnitIncrement(18);
-        main.add(scroll, BorderLayout.CENTER);
+        return scroll;
+    }
 
-        // 하단부 — 오른쪽에 배치한 등록 버튼
+    // 하단부 — 오른쪽에 배치한 등록 버튼
+    private JPanel createRegisterFooter() {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         footer.setOpaque(false);
 
-        JButton add = new JButton("+  등록");
-        add.setPreferredSize(new Dimension(112, 40));
-        add.setBackground(TEAL);
-        add.setForeground(Color.WHITE);
+        JButton addButton = new JButton("+  등록");
+        addButton.setPreferredSize(new Dimension(112, 40));
+        addButton.setBackground(TEAL);
+        addButton.setForeground(Color.WHITE);
 
         // null을 전달하면 새 과제를 등록하는 빈 입력창을 연다.
-        add.addActionListener(event -> openEditor(null));
+        addButton.addActionListener(event -> openEditor(null));
 
-        footer.add(add);
-        main.add(footer, BorderLayout.SOUTH);
-
-        return main;
+        footer.add(addButton);
+        return footer;
     }
 
-    // 현재 점수와 검색 및 필터 조건에 맞는 과제 목록을 다시 표시한다.
+    // 과제 카드, 점수 새로고침 및 마감순 정렬
     private void refreshCards() {
-        score.setText("점수  " + manager.getTaskScore().getScore() + "점");
-        String keyword = search.getText().trim().toLowerCase(Locale.ROOT);
-        boolean includeCompleted = filter.getSelectedIndex() == 0;
+        scoreLabel.setText("점수  " + manager.getTaskScore().getScore() + "점");
+        String keyword = searchField.getText().trim().toLowerCase(Locale.ROOT);
+        boolean includeCompleted = taskFilter.getSelectedIndex() == 0;
         LocalDateTime now = LocalDateTime.now(SEOUL);
-        cards.removeAll();
-        // 완료 여부와 검색어로 과제를 걸러낸 뒤 마감이 빠른 순서대로 카드로 만든다.
-        manager.getTasks().stream()
-                .filter(task -> includeCompleted || task.getProcess() != 100)
-                .filter(task -> task.getTaskName().toLowerCase(Locale.ROOT).contains(keyword)
-                        || task.getSubName().toLowerCase(Locale.ROOT).contains(keyword))
-                .sorted(Comparator.comparing(Task::getDeadLine))
-                .forEach(task -> cards.add(createCard(task, now)));
-        // 목록이 비어 있으면 검색어 유무에 맞춰 안내 문구를 표시한다.
-        if (cards.getComponentCount() == 0) {
-            JLabel empty = new JLabel(keyword.isEmpty() ? "표시할 과제가 없습니다." : "검색 결과가 없습니다.");
+        cardsPanel.removeAll();
+        List<Task> visibleTasks = new ArrayList<>();
+        for (Task task : manager.getTasks()) {
+            if (!includeCompleted && task.getProcess() == 100) {continue;}
+
+            String taskName = task.getTaskName().toLowerCase(Locale.ROOT);
+            if (taskName.contains(keyword)
+                    || task.getSubName().toLowerCase(Locale.ROOT).contains(keyword)) {
+                visibleTasks.add(task);
+            }
+        }
+
+        visibleTasks.sort(Comparator.comparing(Task::getDeadLine));
+        for (Task task : visibleTasks) {
+            cardsPanel.add(createCard(task, now));
+        }
+
+        if (visibleTasks.isEmpty()) {
+            String message = keyword.isEmpty() ? "표시할 과제가 없습니다." : "검색 결과가 없습니다.";
+            JLabel empty = new JLabel(message);
             empty.setForeground(MUTED);
-            cards.add(empty);
+            cardsPanel.add(empty);
         }
         // 카드를 다시 배치하고 화면을 다시 그린다.
-        cards.revalidate();
-        cards.repaint();
+        cardsPanel.revalidate();
+        cardsPanel.repaint();
     }
 
-    // 과제 한 건의 상태, 기본 정보, 진행도, 수정 및 삭제 버튼을 카드에 담는다.
+    // 과제 카드 생성
     private JPanel createCard(Task task, LocalDateTime now) {
         JPanel card = new JPanel(new BorderLayout(14, 0));
         card.setBackground(Color.WHITE);
@@ -194,27 +227,32 @@ public class TodoFrame extends JFrame {
                 BorderFactory.createLineBorder(new Color(218, 227, 233)),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12)));
 
-        // 마감 상태를 카드 왼쪽에 표시하고 만료된 과제에는 다른 색을 사용한다.
+
         String status = statusOf(task, now);
         JLabel badge = new JLabel(status, SwingConstants.CENTER);
         badge.setPreferredSize(new Dimension(66, 0));
         badge.setOpaque(true);
-        badge.setBackground(status.equals("만료") ? new Color(253, 235, 230) : new Color(224, 243, 238));
-        badge.setForeground(status.equals("만료") ? new Color(146, 58, 44) : TEAL);
+        if ("만료".equals(status)) {
+            badge.setBackground(new Color(232, 232, 232));
+            badge.setForeground(new Color(85, 85, 85));}
+        else if ("완료".equals(status)) {
+            badge.setBackground(new Color(224, 243, 238));
+            badge.setForeground(TEAL);}
+        else {
+            badge.setBackground(new Color(255, 243, 196));
+            badge.setForeground(new Color(110, 80, 0));};
         badge.setFont(badge.getFont().deriveFont(Font.BOLD, 15f));
         card.add(badge, BorderLayout.WEST);
 
         JPanel center = new JPanel(new GridLayout(0, 1, 0, 3));
         center.setOpaque(false);
         JLabel name = new JLabel(task.getTaskName());
-        // 사용자가 입력한 과제명을 HTML로 해석하지 않고 그대로 표시한다.
         name.putClientProperty("html.disable", true);
         name.setFont(name.getFont().deriveFont(Font.BOLD, 16f));
         name.setForeground(NAVY);
         name.setPreferredSize(new Dimension(0, name.getPreferredSize().height));
         center.add(name);
         JLabel subject = new JLabel(task.getSubName() + "  ·  " + task.getDeadLine().format(DISPLAY_DATE));
-        // 과목명도 일반 텍스트로 표시한다.
         subject.putClientProperty("html.disable", true);
         subject.setForeground(MUTED);
         subject.setPreferredSize(new Dimension(0, subject.getPreferredSize().height));
@@ -232,37 +270,49 @@ public class TodoFrame extends JFrame {
         edit.addActionListener(event -> openEditor(task));
         actions.add(edit);
         JButton delete = new JButton("삭제");
-        delete.addActionListener(event -> {
-            // 삭제를 확인한 경우에만 목록에서 과제를 제거하고 저장한다.
-            int answer = JOptionPane.showConfirmDialog(this, "선택한 과제를 삭제할까요?",
-                    "과제 삭제", JOptionPane.OK_CANCEL_OPTION);
-            if (answer == JOptionPane.OK_OPTION) {
-                manager.removeTask(task);
-                refreshAfterSave(manager.applyDeadlinePenalty(true));
-            }
-        });
+        delete.addActionListener(event -> confirmAndDeleteTask(task));
         actions.add(delete);
         card.add(actions, BorderLayout.EAST);
         return card;
     }
 
-    // 완료를 먼저 확인하고, 미완료 과제는 마감 시각과 남은 날짜로 상태를 결정한다.
+    //삭제 확인창
+    private void confirmAndDeleteTask(Task task) {
+        int answer = JOptionPane.showConfirmDialog(this, "선택한 과제를 삭제할까요?",
+                "과제 삭제", JOptionPane.OK_CANCEL_OPTION);
+        if (answer == JOptionPane.OK_OPTION) {
+            manager.removeTask(task);
+            refreshAfterSave(manager.applyDeadlinePenalty(true));
+        }
+    }
+
+   // 과제 상태 표시 - D-Day 계산 및 마감 여부
     static String statusOf(Task task, LocalDateTime now) {
-        if (task.getProcess() == 100) {return "완료";}
-        if (now.isAfter(task.getDeadLine())) {return "만료";}
-        // 마감이 지나지 않았다면 날짜만 비교해 당일은 D-Day로 표시한다.
+        if (task.getProcess() == 100) {
+            return "완료";
+        }
+        if (now.isAfter(task.getDeadLine())) {
+            return "만료";
+        }
         long days = ChronoUnit.DAYS.between(now.toLocalDate(), task.getDeadLine().toLocalDate());
         return days == 0 ? "D-Day" : "D-" + days;
     }
 
-    // 등록할 때는 빈 입력칸을 열고, 수정할 때는 기존 과제 값으로 채운다.
+    //등록 및 수정 창
     private void openEditor(Task task) {
-        JTextField name = new JTextField(task == null ? "" : task.getTaskName(), 22);
-        JTextField subject = new JTextField(task == null ? "" : task.getSubName(), 22);
-        JTextField deadline = new JTextField(task == null ? "" : task.getDeadLine().toString(), 22);
-        JTextField memo = new JTextField(task == null ? "" : task.getMemo(), 22);
+        JTextField name = new JTextField(22);
+        JTextField subject = new JTextField(22);
+        JTextField deadline = new JTextField(22);
+        JTextField memo = new JTextField(22);
         JComboBox<Integer> progress = new JComboBox<>(new Integer[]{0, 25, 50, 75, 100});
-        if (task != null) {progress.setSelectedItem(task.getProcess());}
+
+        // null이 아니면 기존 과제 수정(입력 값을 기존 값에 덮어씌움)
+        if (task != null) {
+            name.setText(task.getTaskName());
+            subject.setText(task.getSubName());
+            deadline.setText(task.getDeadLine().toString());
+            memo.setText(task.getMemo());
+            progress.setSelectedItem(task.getProcess());}
 
         // 입력 항목의 이름과 입력칸을 위에서부터 순서대로 배치한다.
         JPanel form = new JPanel(new GridLayout(0, 1, 0, 4));
@@ -278,53 +328,51 @@ public class TodoFrame extends JFrame {
         form.add(memo);
 
         String title = task == null ? "과제 등록" : "과제 수정";
-        // 확인을 누르면 입력을 검사한다. 오류가 있으면 입력값을 유지한 채 창을 다시 연다.
         while (JOptionPane.showConfirmDialog(this, form, title,
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
-            if (name.getText().isBlank() || subject.getText().isBlank()) {
+            String taskName = name.getText();
+            String subjectName = subject.getText();
+            String memoText = memo.getText();
+
+            if (taskName.isBlank() || subjectName.isBlank()) {
                 showError("과제명과 과목명을 입력해 주세요.");
                 continue;
             }
-            // 저장 파일에서 필드를 구분하는 문자 $는 입력값에 사용할 수 없다.
-            if ((name.getText() + subject.getText() + memo.getText()).contains("$")) {
+            // 저장 파일에 구분자 $는 사용 불가능
+            if (taskName.contains("$") || subjectName.contains("$") || memoText.contains("$")) {
                 showError("과제명, 과목명, 메모에는 $를 사용할 수 없습니다.");
                 continue;
             }
-            // 마감기한 문자열을 날짜와 시각으로 변환한다.
             LocalDateTime due;
-            try {
-                due = LocalDateTime.parse(deadline.getText().trim());
-            } catch (DateTimeParseException e) {
+            try {due = LocalDateTime.parse(deadline.getText().trim());}
+            catch (DateTimeParseException e) {
                 showError("마감기한을 2026-12-01T23:59 형식으로 입력해 주세요.");
-                continue;
-            }
+                continue;}
 
             int value = (Integer) progress.getSelectedItem();
-            String note = memo.getText().isBlank() ? "메모 없음" : memo.getText();
-            // 등록은 새 Task를 추가하고, 수정은 기존 Task의 정보와 진행도를 갱신한다.
-            if (task == null) {
-                manager.addTask(new Task(name.getText().trim(), due, subject.getText().trim(), value, note, false));
-            } else {
-                task.setTaskName(name.getText().trim());
-                task.setSubName(subject.getText().trim());
+            String note = memoText.isBlank() ? "메모 없음" : memoText;
+
+            // null이면 과제 신규 등록
+            if (task == null) {manager.addTask(new Task(taskName.trim(), due, subjectName.trim(), value, note, false));}
+            else {
+                task.setTaskName(taskName.trim());
+                task.setSubName(subjectName.trim());
                 task.setDeadLine(due);
                 task.setMemo(note);
-                manager.updateProgress(task, value);
-            }
-            // 변경 사항을 저장하는 과정에서 마감 감점을 확인하고 화면을 갱신한다.
+                manager.updateProgress(task, value);}
+            // 화면 갱신
             refreshAfterSave(manager.applyDeadlinePenalty(true));
             return;
         }
     }
 
-    // 저장에 실패하면 파일을 다시 읽어 저장된 데이터로 화면을 복구한다.
+    //저장 실패시 로그인 화면으로 돌아감(버그났을 때 확인용)
     private void refreshAfterSave(boolean saved) {
         if (!saved) {
             // 파일도 다시 읽을 수 없으면 과제 창을 닫고 로그인 화면으로 돌아간다.
             if (!manager.loadTasks()) {
                 showError("저장한 데이터를 다시 열 수 없습니다. 다시 로그인해 주세요.");
-                dispose();
-                logout.run();
+                returnToLogin();
                 return;
             }
             showError("변경 내용을 저장하지 못했습니다.");
@@ -332,8 +380,12 @@ public class TodoFrame extends JFrame {
         refreshCards();
     }
 
-    // 오류 메시지를 현재 과제 창에 대화상자로 표시한다.
-    private void showError(String message) {
-        JOptionPane.showMessageDialog(this, message, "할 일 관리", JOptionPane.ERROR_MESSAGE);
-    }
+    //로그인 화면 표시
+    private void returnToLogin() {
+        dispose();
+        GuiMain.showLogin();}
+
+    // 오류 메세지 표시(오류 확인용)
+    private void showError(String message) {JOptionPane.showMessageDialog(this, message,
+            "할 일 관리", JOptionPane.ERROR_MESSAGE);}
 }
