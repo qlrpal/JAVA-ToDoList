@@ -4,6 +4,8 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -27,6 +29,8 @@ public class TodoFrame extends JFrame {
     private final JTextField searchField = new JTextField();
     private final JComboBox<String> taskFilter = new JComboBox<>(new String[]{"전체", "진행 중"});
     private final JPanel cardsPanel = new JPanel(new GridLayout(0, 1, 0, 10));
+    private JDialog detailDialog;
+    private Task detailTask;
 
     // 창 설정
     public TodoFrame(String id, TaskManager manager) {
@@ -272,7 +276,140 @@ public class TodoFrame extends JFrame {
         delete.addActionListener(event -> confirmAndDeleteTask(task));
         actions.add(delete);
         card.add(actions, BorderLayout.EAST);
+        MouseAdapter detailListener = new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    toggleTaskDetails(task);
+                }
+            }
+        };
+
+        card.addMouseListener(detailListener);
+        badge.addMouseListener(detailListener);
+        center.addMouseListener(detailListener);
+        name.addMouseListener(detailListener);
+        subject.addMouseListener(detailListener);
+        progress.addMouseListener(detailListener);
+        actions.addMouseListener(detailListener);
         return card;
+    }
+
+
+
+    private JLabel createStatusBadge(String status, int height) {
+        JLabel badge = new JLabel(status, SwingConstants.CENTER);
+        badge.setPreferredSize(new Dimension(66, height));
+        badge.setOpaque(true);
+        badge.setFont(badge.getFont().deriveFont(Font.BOLD, 15f));
+
+        if ("만료".equals(status)) {
+            badge.setBackground(new Color(232, 232, 232));
+            badge.setForeground(new Color(85, 85, 85));
+        } else if ("완료".equals(status)) {
+            badge.setBackground(new Color(224, 243, 238));
+            badge.setForeground(TEAL);
+        } else {
+            badge.setBackground(new Color(255, 243, 196));
+            badge.setForeground(new Color(110, 80, 0));
+        }
+
+        return badge;
+    }
+
+    //기존에 상세가 켜져있으면 끄고 아님 키고
+    private void toggleTaskDetails(Task task) {
+        if (detailDialog != null && detailDialog.isShowing()) {
+            detailDialog.dispose();
+            if (detailTask == task) {
+                return;
+            }
+        }
+
+        JDialog dialog = new JDialog(this, "과제 상세 정보", false); //dialog는 팝업 생성
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setContentPane(createTaskDetailsPanel(task, dialog));
+        dialog.pack(); //창 크기를 알아서 잡아줌
+        dialog.setLocationRelativeTo(this);
+
+        detailDialog = dialog;
+        detailTask = task;
+        dialog.setVisible(true);
+    }
+
+    private JPanel createTaskDetailsPanel(Task task, JDialog dialog) {
+        JPanel panel = new JPanel(new BorderLayout(0, 14));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 22, 16, 22));
+
+        JLabel title = new JLabel();
+        title.putClientProperty("html.disable", true);
+        title.setText(task.getTaskName());
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
+        title.setForeground(NAVY);
+
+        JLabel subject = new JLabel();
+        subject.putClientProperty("html.disable", true);
+        subject.setText(task.getSubName());
+        subject.setForeground(MUTED);
+
+        JPanel headings = new JPanel(new GridLayout(2, 1, 0, 2));
+        headings.setOpaque(false);
+        headings.add(title);
+        headings.add(subject);
+
+        String status = statusOf(task, LocalDateTime.now(SEOUL));
+        JPanel header = new JPanel(new BorderLayout(14, 0));
+        header.setOpaque(false);
+        header.add(createStatusBadge(status, 54), BorderLayout.WEST);
+        header.add(headings, BorderLayout.CENTER);
+        panel.add(header, BorderLayout.NORTH);
+
+        JProgressBar progress = new JProgressBar(0, 100);
+        progress.setValue(task.getProcess());
+        progress.setStringPainted(true);
+        progress.setForeground(TEAL);
+
+        JPanel summary = new JPanel(new GridLayout(0, 1, 0, 5));
+        summary.setOpaque(false);
+        summary.add(new JSeparator());
+        summary.add(new JLabel("마감 기한  " + task.getDeadLine().format(DISPLAY_DATE)));
+        summary.add(new JLabel("진행률"));
+        summary.add(progress);
+
+        String memo = task.getMemo();
+        if (memo.isBlank() || "메모 없음".equals(memo)) {
+            memo = "등록된 메모가 없습니다.";
+        }
+
+        JTextArea memoArea = new JTextArea(memo, 4, 32);
+        memoArea.setEditable(false);
+        memoArea.setLineWrap(true); //줄넘김
+        memoArea.setWrapStyleWord(true); //단어 단위로 줄넘김
+        memoArea.setBackground(BACKGROUND);
+        memoArea.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        memoArea.setCaretPosition(0);
+
+        JPanel memoPanel = new JPanel(new BorderLayout(0, 6));
+        memoPanel.setOpaque(false);
+        memoPanel.add(new JLabel("메모"), BorderLayout.NORTH);
+        memoPanel.add(new JScrollPane(memoArea), BorderLayout.CENTER);
+
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(summary, BorderLayout.NORTH);
+        body.add(memoPanel, BorderLayout.CENTER);
+        panel.add(body, BorderLayout.CENTER);
+
+        JButton close = new JButton("닫기");
+        close.addActionListener(event -> dialog.dispose());
+
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        footer.setOpaque(false);
+        footer.add(close);
+        panel.add(footer, BorderLayout.SOUTH);
+
+        return panel;
     }
 
     //삭제 확인창
