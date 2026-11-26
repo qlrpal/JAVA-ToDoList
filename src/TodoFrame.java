@@ -90,7 +90,7 @@ public class TodoFrame extends JFrame {
         logoutButton.addActionListener(event -> returnToLogin());
         actions.add(logoutButton);
         JButton exitButton = new JButton("종료");
-        exitButton.addActionListener(event -> dispose());
+        exitButton.addActionListener(event -> dispose()); //dispose() : 창을 닫는 메서드(강의자료에 나오지 않음)
         actions.add(exitButton);
         sidebar.add(actions, BorderLayout.SOUTH);
         return sidebar;
@@ -125,7 +125,7 @@ public class TodoFrame extends JFrame {
         searchLabel.setLabelFor(searchField);
         searchField.setToolTipText("과제명 또는 과목명으로 검색"); //툴 팁 표시(커서 가져다 대면 나옴)
         searchField.setPreferredSize(new Dimension(0, 34));
-        // 검색창 내용 수정시 즉각 반응
+        // 검색창 내용 수정시 즉각 반응하는 코드(강의자료에는 나오지 않음)
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent event) {
@@ -151,9 +151,8 @@ public class TodoFrame extends JFrame {
         return header;
     }
 
-    //과제 카드를 넣을 스크롤 패널
+    // 중단부 — 과제 카드 목록, list패널을 담는 스크롤 가능한 Pane
     private JScrollPane createTaskScrollPane() {
-        // 중단부 — 스크롤 가능한 과제 카드 목록
         cardsPanel.setOpaque(false);
 
         JPanel list = new JPanel(new BorderLayout());
